@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find /mnt/c/life-assistant -type f | sort)",
+      "Read(//mnt/c/**)"
+    ]
+  }
+}

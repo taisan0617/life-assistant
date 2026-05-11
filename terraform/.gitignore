@@ -1,0 +1,30 @@
+# Terraform state (local management — do NOT commit)
+terraform.tfstate
+terraform.tfstate.backup
+*.tfstate
+*.tfstate.*
+
+# Terraform plan files
+*.tfplan
+*.plan
+
+# Terraform plugin cache and working directory
+**/.terraform/
+
+# Lambda zip artifacts (generated during plan)
+modules/weather_lambda/*.zip
+modules/weather_lambda/dist/
+
+# Environment-specific overrides (sensitive values)
+*.tfvars.local
+*.auto.tfvars
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo

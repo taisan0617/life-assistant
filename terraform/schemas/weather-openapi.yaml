@@ -2,19 +2,14 @@ openapi: "3.0.0"
 info:
   title: Weather Action API
   version: "1.0.0"
-  description: |
-    Provides current weather information for a given city.
-    Used by the life-assistant Bedrock Agent action group.
+  description: Provides current weather information for a given city.
 
 paths:
   /getCurrentWeather:
     get:
       operationId: getCurrentWeather
       summary: Get current weather for a city
-      description: >
-        Returns current weather data including temperature, humidity,
-        wind speed, and a short description for the specified city.
-        City names must be provided in English.
+      description: Returns current weather data including temperature, humidity, wind speed, and a short description for the specified city. City names must be provided in English.
       parameters:
         - name: city
           in: query
@@ -22,7 +17,6 @@ paths:
           description: City name in English (e.g. Tokyo, Yokohama, Nagano)
           schema:
             type: string
-            example: Tokyo
       responses:
         "200":
           description: Weather data retrieved successfully

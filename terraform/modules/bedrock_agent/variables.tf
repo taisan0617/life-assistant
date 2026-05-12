@@ -32,5 +32,5 @@ variable "foundation_model_id" {
     See: https://docs.aws.amazon.com/bedrock/latest/userguide/inference-profiles-support.html
   EOT
   type        = string
-  default     = "us.anthropic.claude-sonnet-4-6-20251201-v1:0"
+  default     = "us.anthropic.claude-sonnet-4-6"
 }

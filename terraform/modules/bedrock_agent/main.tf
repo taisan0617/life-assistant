@@ -81,9 +81,15 @@ resource "aws_iam_role_policy" "bedrock_agent" {
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream",
         ]
-        # * required for cross-region inference profiles; ARN format differs from base models.
-        # Scope down to specific model ARNs after confirming the inference profile ARN format.
         Resource = "*"
+      },
+      {
+        Sid    = "ReadOpenAPISchemaFromS3"
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
+        Resource = [
+          "${aws_s3_bucket.schemas.arn}/*"
+        ]
       }
     ]
   })
@@ -167,9 +173,18 @@ resource "time_sleep" "wait_agent_prepared" {
 # ─── Agent Alias (dev) ────────────────────────────────────────────────────────
 
 # Must be created after the agent reaches PREPARED state.
+# Bedrock does not allow an alias to route to "DRAFT" directly — aliases must
+# point to a numbered version. When no routing_configuration is specified, AWS
+# auto-creates the next numbered version from the current DRAFT on each alias
+# creation. replace_triggered_by forces alias recreation (and thus a new version
+# snapshot) whenever a new prepare cycle runs, keeping the alias current.
 resource "aws_bedrockagent_agent_alias" "dev" {
   agent_id         = aws_bedrockagent_agent.main.agent_id
   agent_alias_name = "dev"
+
+  lifecycle {
+    replace_triggered_by = [null_resource.prepare_agent_after_action_group]
+  }
 
   depends_on = [time_sleep.wait_agent_prepared]
 }

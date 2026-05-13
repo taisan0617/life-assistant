@@ -14,6 +14,11 @@ terraform.tfstate.backup
 # Lambda zip artifacts (generated during plan)
 modules/weather_lambda/*.zip
 modules/weather_lambda/dist/
+modules/chat_stream_handler/*.zip
+modules/history_handler/*.zip
+
+# Node.js dependencies (run `npm install` in lambda/chat_stream before apply)
+lambda/chat_stream/node_modules/
 
 # Environment-specific overrides (sensitive values)
 *.tfvars.local

@@ -4,30 +4,32 @@ import type { SessionSummary } from "../lib/types";
 
 /**
  * 会話一覧の取得と管理を行う hook。
- * マウント時に自動でロードし、loadSessions() を呼ぶと再取得できる。
+ * idToken が null のとき（未ログイン）はリクエストしない。
+ * idToken が変わる（ログイン完了）と自動でロードする。
  */
-export function useSessions() {
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
+export function useSessions(idToken: string | null) {
+  const [sessions,  setSessions]  = useState<SessionSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error,     setError]     = useState<string | null>(null);
 
   const loadSessions = async () => {
+    if (!idToken) return;
     setIsLoading(true);
     setError(null);
     try {
-      const data = await fetchSessions();
+      const data = await fetchSessions(idToken);
       setSessions(data);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "不明なエラー";
-      setError(message);
+      setError(err instanceof Error ? err.message : "不明なエラー");
     } finally {
       setIsLoading(false);
     }
   };
 
+  // idToken が確定したら（ログイン直後・セッション復元後）自動でロード
   useEffect(() => {
     loadSessions();
-  }, []);
+  }, [idToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return { sessions, isLoading, error, loadSessions };
 }

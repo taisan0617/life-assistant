@@ -12,3 +12,8 @@ variable "history_lambda_name" {
   description = "Name of the history Lambda function (used for resource-based policy)"
   type        = string
 }
+
+variable "cognito_user_pool_arn" {
+  description = "Cognito User Pool ARN used by the API Gateway Cognito Authorizer"
+  type        = string
+}

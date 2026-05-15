@@ -1,36 +1,37 @@
 import { useState } from "react";
-import { Menu } from "lucide-react";
+import { Menu, Loader2 } from "lucide-react";
 import { Sidebar } from "./components/Sidebar";
 import { ChatView } from "./components/ChatView";
+import { LoginForm } from "./components/LoginForm";
+import { useAuth } from "./hooks/useAuth";
 import { useStreamingChat } from "./hooks/useStreamingChat";
 import { useSessions } from "./hooks/useSessions";
-import { fetchSessionMessages } from "./lib/api";
+import { fetchSession } from "./lib/api";
 
 /**
  * アプリケーションのルートコンポーネント。
  *
- * 状態管理:
- * - currentSessionId: 現在表示中のセッション ID（null = 新規会話）
- * - sidebarOpen: モバイル用ドロワーの開閉状態
- *
- * データフロー:
- * useSessions → Sidebar（会話一覧）
- * useStreamingChat → ChatView（メッセージ一覧＋入力フォーム）
+ * 認証フロー:
+ *   isLoading=true  → セッション復元中のスピナー
+ *   isAuthenticated=false → LoginForm
+ *   isAuthenticated=true  → チャット画面（Sidebar + ChatView）
  */
 export default function App() {
+  const { isAuthenticated, isLoading, user, idToken, login, logout, error } = useAuth();
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen,      setSidebarOpen]      = useState(false);
 
-  const { sessions, isLoading: sessionsLoading, loadSessions } = useSessions();
+  // idToken が null のとき useSessions は自動スキップする
+  const { sessions, isLoading: sessionsLoading, loadSessions } = useSessions(idToken);
   const { messages, isStreaming, sendMessage, loadSession, newChat } = useStreamingChat();
 
   // ── 会話切り替え ──────────────────────────────────────────────────────────
   const handleSelectSession = async (sessionId: string) => {
-    if (sessionId === currentSessionId) return;
+    if (sessionId === currentSessionId || !idToken) return;
     setCurrentSessionId(sessionId);
     setSidebarOpen(false);
     try {
-      const msgs = await fetchSessionMessages(sessionId);
+      const msgs = await fetchSession(sessionId, idToken);
       loadSession(msgs);
     } catch (err) {
       console.error("履歴の読み込みに失敗:", err);
@@ -46,16 +47,31 @@ export default function App() {
 
   // ── メッセージ送信 ────────────────────────────────────────────────────────
   const handleSendMessage = async (text: string) => {
+    if (!idToken) return;
     await sendMessage(text, currentSessionId, (newSessionId) => {
-      // done イベントで新しい sessionId が確定したらセットし、サイドバーを更新
       setCurrentSessionId(newSessionId);
       loadSessions();
-    });
+    }, idToken);
   };
 
+  // ── セッション復元中 ──────────────────────────────────────────────────────
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+      </div>
+    );
+  }
+
+  // ── 未ログイン ────────────────────────────────────────────────────────────
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={login} error={error} />;
+  }
+
+  // ── チャット画面 ──────────────────────────────────────────────────────────
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
-      {/* モバイル用オーバーレイ（サイドバー外側をタップで閉じる） */}
+      {/* モバイル用オーバーレイ */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/40 z-20 md:hidden"
@@ -63,7 +79,6 @@ export default function App() {
         />
       )}
 
-      {/* サイドバー */}
       <Sidebar
         sessions={sessions}
         currentSessionId={currentSessionId}
@@ -72,11 +87,12 @@ export default function App() {
         onNewChat={handleNewChat}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        user={user}
+        onLogout={logout}
       />
 
-      {/* メインエリア */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* モバイル用ヘッダー（サイドバー開閉ボタン） */}
+        {/* モバイル用ヘッダー */}
         <header className="md:hidden flex items-center gap-3 px-4 py-3 border-b bg-white">
           <button
             onClick={() => setSidebarOpen(true)}

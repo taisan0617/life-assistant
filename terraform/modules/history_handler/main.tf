@@ -65,8 +65,7 @@ resource "aws_lambda_function" "history" {
 
   environment {
     variables = {
-      DYNAMODB_TABLE  = var.dynamodb_table_name
-      DEFAULT_USER_ID = "default-user"
+      DYNAMODB_TABLE = var.dynamodb_table_name
     }
   }
 }

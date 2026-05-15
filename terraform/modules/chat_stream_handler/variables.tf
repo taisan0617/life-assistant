@@ -38,3 +38,19 @@ variable "debug_trace" {
   type        = bool
   default     = false
 }
+
+variable "cognito_user_pool_id" {
+  description = "Cognito User Pool ID for JWT verification"
+  type        = string
+}
+
+variable "cognito_app_client_id" {
+  description = "Cognito App Client ID for JWT verification"
+  type        = string
+}
+
+variable "allow_unauthenticated" {
+  description = "If true, requests without Authorization header fall back to 'default-user'. For local/debug only."
+  type        = bool
+  default     = false
+}

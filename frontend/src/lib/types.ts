@@ -1,5 +1,4 @@
 // ─── ストリーミングイベント ────────────────────────────────────────────────────
-// Lambda から NDJSON で届くイベントの型。type フィールドで判別する。
 
 export type StreamEvent =
   | { type: "thinking"; text: string }
@@ -17,7 +16,6 @@ export type StreamEvent =
   | { type: "error"; message: string };
 
 // ─── ツール呼び出し ────────────────────────────────────────────────────────────
-// Action Group の1回の呼び出し。ストリーミング中は endedAt/result が未設定。
 
 export interface ToolCall {
   id: string;
@@ -39,11 +37,18 @@ export interface Message {
   createdAt: string;
 }
 
-// ─── 会話サマリー（サイドバー一覧用） ─────────────────────────────────────────
+// ─── 会話サマリー ──────────────────────────────────────────────────────────────
 
 export interface SessionSummary {
   sessionId: string;
   title: string;
   lastMessage: string;
   updatedAt: string;
+}
+
+// ─── 認証ユーザー ──────────────────────────────────────────────────────────────
+
+export interface AuthUser {
+  email: string;
+  sub: string;
 }

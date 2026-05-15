@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(find /mnt/c/life-assistant -type f | sort)",
-      "Read(//mnt/c/**)"
+      "Read(//mnt/c/**)",
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\life-assistant\\\\terraform\\\\modules\\\\cognito\" -Force)"
     ]
   }
 }

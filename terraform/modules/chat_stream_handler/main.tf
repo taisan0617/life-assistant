@@ -75,11 +75,13 @@ resource "aws_lambda_function" "chat_stream" {
 
   environment {
     variables = {
-      AGENT_ID        = var.agent_id
-      AGENT_ALIAS_ID  = var.agent_alias_id
-      DYNAMODB_TABLE  = var.dynamodb_table_name
-      DEFAULT_USER_ID = "default-user"
-      DEBUG_TRACE     = tostring(var.debug_trace)
+      AGENT_ID              = var.agent_id
+      AGENT_ALIAS_ID        = var.agent_alias_id
+      DYNAMODB_TABLE        = var.dynamodb_table_name
+      COGNITO_USER_POOL_ID  = var.cognito_user_pool_id
+      COGNITO_APP_CLIENT_ID = var.cognito_app_client_id
+      ALLOW_UNAUTHENTICATED = tostring(var.allow_unauthenticated)
+      DEBUG_TRACE           = tostring(var.debug_trace)
     }
   }
 }
@@ -97,7 +99,7 @@ resource "aws_lambda_function_url" "chat_stream" {
   cors {
     allow_origins = ["*"]
     allow_methods = ["POST"]
-    allow_headers = ["content-type"]
+    allow_headers = ["content-type", "authorization"]
     max_age       = 86400
   }
 }

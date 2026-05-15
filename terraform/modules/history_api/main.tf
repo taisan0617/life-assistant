@@ -9,6 +9,22 @@ resource "aws_api_gateway_rest_api" "history" {
   }
 }
 
+# ─── Cognito Authorizer ────────────────────────────────────────────────────────
+#
+# REST API の Cognito Authorizer は Authorization ヘッダーの JWT を検証し、
+# 検証済みの claims を event.requestContext.authorizer.claims に渡す。
+# OPTIONS メソッドは CORS preflight のため認証不要（NONE）のままにする。
+
+resource "aws_api_gateway_authorizer" "cognito" {
+  name          = "cognito-authorizer"
+  type          = "COGNITO_USER_POOLS"
+  rest_api_id   = aws_api_gateway_rest_api.history.id
+  provider_arns = [var.cognito_user_pool_arn]
+
+  # Authorization ヘッダーをトークンソースとして使用
+  identity_source = "method.request.header.Authorization"
+}
+
 # ─── Resources ────────────────────────────────────────────────────────────────
 
 # /sessions
@@ -31,14 +47,15 @@ resource "aws_api_gateway_method" "get_sessions" {
   rest_api_id   = aws_api_gateway_rest_api.history.id
   resource_id   = aws_api_gateway_resource.sessions.id
   http_method   = "GET"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
 resource "aws_api_gateway_integration" "get_sessions" {
   rest_api_id             = aws_api_gateway_rest_api.history.id
   resource_id             = aws_api_gateway_resource.sessions.id
   http_method             = aws_api_gateway_method.get_sessions.http_method
-  integration_http_method = "POST"   # API Gateway always POSTs to Lambda
+  integration_http_method = "POST" # API Gateway は Lambda を常に POST で呼び出す
   type                    = "AWS_PROXY"
   uri                     = var.history_lambda_invoke_arn
 }
@@ -49,7 +66,8 @@ resource "aws_api_gateway_method" "post_sessions" {
   rest_api_id   = aws_api_gateway_rest_api.history.id
   resource_id   = aws_api_gateway_resource.sessions.id
   http_method   = "POST"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
 resource "aws_api_gateway_integration" "post_sessions" {
@@ -62,6 +80,7 @@ resource "aws_api_gateway_integration" "post_sessions" {
 }
 
 # ─── /sessions  OPTIONS (CORS preflight) ─────────────────────────────────────
+# preflight リクエストには Authorization ヘッダーがないため認証は NONE にする
 
 resource "aws_api_gateway_method" "options_sessions" {
   rest_api_id   = aws_api_gateway_rest_api.history.id
@@ -119,7 +138,8 @@ resource "aws_api_gateway_method" "get_session" {
   rest_api_id   = aws_api_gateway_rest_api.history.id
   resource_id   = aws_api_gateway_resource.session_id.id
   http_method   = "GET"
-  authorization = "NONE"
+  authorization = "COGNITO_USER_POOLS"
+  authorizer_id = aws_api_gateway_authorizer.cognito.id
 }
 
 resource "aws_api_gateway_integration" "get_session" {
@@ -184,15 +204,13 @@ resource "aws_api_gateway_integration_response" "options_session_id" {
 }
 
 # ─── Deployment ───────────────────────────────────────────────────────────────
-#
-# triggers.redeployment forces a new deployment whenever any method or integration
-# changes — without this, API Gateway caches the previous configuration.
 
 resource "aws_api_gateway_deployment" "history" {
   rest_api_id = aws_api_gateway_rest_api.history.id
 
   triggers = {
     redeployment = sha1(jsonencode([
+      aws_api_gateway_authorizer.cognito.id,
       aws_api_gateway_resource.sessions.id,
       aws_api_gateway_resource.session_id.id,
       aws_api_gateway_method.get_sessions.id,
@@ -231,7 +249,6 @@ resource "aws_api_gateway_stage" "dev" {
 
 # ─── Lambda Permission ────────────────────────────────────────────────────────
 
-# Allow API Gateway to invoke the history Lambda from any method/path in this API.
 resource "aws_lambda_permission" "history_apigw" {
   statement_id  = "AllowAPIGatewayInvoke"
   action        = "lambda:InvokeFunction"

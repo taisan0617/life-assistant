@@ -41,3 +41,37 @@ output "dynamodb_table_arn" {
   description = "DynamoDB table ARN"
   value       = module.dynamodb.table_arn
 }
+
+# ─── Phase 4-A Outputs ────────────────────────────────────────────────────────
+
+output "cognito_user_pool_id" {
+  description = "Cognito User Pool ID"
+  value       = module.cognito.user_pool_id
+}
+
+output "cognito_app_client_id" {
+  description = "Cognito App Client ID (use in frontend and CLI auth)"
+  value       = module.cognito.app_client_id
+}
+
+output "cognito_user_pool_arn" {
+  description = "Cognito User Pool ARN"
+  value       = module.cognito.user_pool_arn
+}
+
+# ─── Phase 4-C Outputs ────────────────────────────────────────────────────────
+
+output "cloudfront_domain" {
+  description = "CloudFront distribution domain (access the app here)"
+  value       = module.cloudfront.distribution_domain
+}
+
+output "cloudfront_distribution_id" {
+  description = "CloudFront distribution ID (used for cache invalidation after deploy)"
+  value       = module.cloudfront.distribution_id
+}
+
+output "frontend_bucket_name" {
+  description = "S3 bucket name to upload the React build artifacts"
+  value       = module.cloudfront.frontend_bucket_name
+}

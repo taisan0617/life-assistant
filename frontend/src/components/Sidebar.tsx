@@ -1,7 +1,7 @@
-import { X } from "lucide-react";
+import { X, LogOut } from "lucide-react";
 import { NewChatButton } from "./NewChatButton";
 import { SessionList } from "./SessionList";
-import type { SessionSummary } from "../lib/types";
+import type { AuthUser, SessionSummary } from "../lib/types";
 
 interface Props {
   sessions: SessionSummary[];
@@ -11,6 +11,8 @@ interface Props {
   onNewChat: () => void;
   isOpen: boolean;
   onClose: () => void;
+  user: AuthUser | null;
+  onLogout: () => void;
 }
 
 /**
@@ -26,6 +28,8 @@ export function Sidebar({
   onNewChat,
   isOpen,
   onClose,
+  user,
+  onLogout,
 }: Props) {
   return (
     <aside
@@ -39,7 +43,6 @@ export function Sidebar({
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100">
         <h1 className="font-semibold text-gray-800 text-sm">Life Assistant</h1>
-        {/* モバイルの閉じるボタン */}
         <button
           onClick={onClose}
           className="md:hidden p-1 rounded text-gray-400 hover:text-gray-600"
@@ -53,7 +56,7 @@ export function Sidebar({
         <NewChatButton onClick={onNewChat} />
       </div>
 
-      {/* 会話一覧（スクロール領域） */}
+      {/* 会話一覧 */}
       <div className="flex-1 overflow-hidden flex flex-col min-h-0 pb-2">
         <p className="px-4 pb-1 text-xs font-medium text-gray-400 uppercase tracking-wider">
           履歴
@@ -69,9 +72,20 @@ export function Sidebar({
         />
       </div>
 
-      {/* フッター */}
-      <div className="px-4 py-3 border-t border-gray-100 text-xs text-gray-400">
-        Phase 3 — Bedrock Agent UI
+      {/* フッター: ユーザー情報 + ログアウト */}
+      <div className="px-4 py-3 border-t border-gray-100">
+        {user && (
+          <p className="text-xs text-gray-500 truncate mb-2" title={user.email}>
+            {user.email}
+          </p>
+        )}
+        <button
+          onClick={onLogout}
+          className="flex items-center gap-1.5 text-sm text-red-500 hover:text-red-700 transition-colors"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          ログアウト
+        </button>
       </div>
     </aside>
   );

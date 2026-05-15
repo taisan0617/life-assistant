@@ -1,12 +1,16 @@
 """
 history-handler Lambda — REST API for conversation history.
 
-Routes (via API Gateway Lambda Proxy Integration):
-  GET  /sessions        List all sessions for the default user (newest first via GSI)
-  GET  /sessions/{id}   List all messages in a specific session (oldest first)
-  POST /sessions        Create an empty named session
+認証:
+    API Gateway の Cognito Authorizer が JWT を検証済みで、
+    event["requestContext"]["authorizer"]["claims"]["sub"] にユーザーIDが入っている。
 
-All responses include CORS headers for Phase 3 React UI integration.
+Routes (API Gateway Lambda Proxy Integration):
+    GET  /sessions        ログイン中ユーザーの会話一覧 (最新順)
+    GET  /sessions/{id}   特定セッションの全メッセージ (古い順)
+    POST /sessions        空のセッションを新規作成
+
+All responses include CORS headers for Phase 3/4 React UI integration.
 """
 
 import json
@@ -16,10 +20,8 @@ from datetime import datetime, timezone
 
 import boto3
 from boto3.dynamodb.conditions import Key
-from botocore.exceptions import ClientError
 
-TABLE_NAME      = os.environ["DYNAMODB_TABLE"]
-DEFAULT_USER_ID = os.environ["DEFAULT_USER_ID"]
+TABLE_NAME = os.environ["DYNAMODB_TABLE"]
 
 dynamodb = boto3.resource("dynamodb")
 table    = dynamodb.Table(TABLE_NAME)
@@ -46,14 +48,29 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# ─── 認証ヘルパー ──────────────────────────────────────────────────────────────
+
+def _get_user_id(event: dict) -> str | None:
+    """
+    Cognito Authorizer が設定した claims から sub (ユーザーID) を取得する。
+    認証なしでリクエストが届いた場合は None を返す。
+    """
+    claims = (
+        event.get("requestContext", {})
+             .get("authorizer", {})
+             .get("claims", {})
+    )
+    return claims.get("sub") or None
+
+
 # ─── Route Handlers ───────────────────────────────────────────────────────────
 
 def list_sessions(user_id: str) -> dict:
     """Return all sessions for user_id, sorted newest-first via GSI."""
     result = table.query(
-        IndexName     = "userId-updatedAt-index",
+        IndexName              = "userId-updatedAt-index",
         KeyConditionExpression = Key("userId").eq(user_id),
-        ScanIndexForward = False,   # descending updatedAt → newest first
+        ScanIndexForward       = False,  # descending updatedAt → newest first
     )
     sessions = [
         {
@@ -75,7 +92,7 @@ def get_session_messages(session_id: str) -> dict:
             Key("PK").eq(f"SESSION#{session_id}") &
             Key("SK").begins_with("MSG#")
         ),
-        ScanIndexForward = True,    # ascending SK → oldest first
+        ScanIndexForward = True,  # ascending SK → oldest first
     )
     messages = [
         {
@@ -113,25 +130,26 @@ def create_session(user_id: str, body: dict) -> dict:
 
 def handler(event: dict, context) -> dict:
     """API Gateway Lambda Proxy integration handler."""
-    method     = event.get("httpMethod", "")
-    path       = event.get("path", "")
+    method      = event.get("httpMethod", "")
+    path        = event.get("path", "")
     path_params = event.get("pathParameters") or {}
-    session_id = path_params.get("id")
-    user_id    = DEFAULT_USER_ID
+    session_id  = path_params.get("id")
 
-    # ── OPTIONS (CORS preflight) ─────────────────────────────────────────────
+    # OPTIONS は Cognito Authorizer をかけていないので claims は届かない
     if method == "OPTIONS":
         return _resp(200, {})
 
-    # ── GET /sessions ────────────────────────────────────────────────────────
+    # Cognito Authorizer の claims から userId を取得
+    user_id = _get_user_id(event)
+    if not user_id:
+        return _resp(401, {"error": "Unauthorized"})
+
     if method == "GET" and path == "/sessions":
         return list_sessions(user_id)
 
-    # ── GET /sessions/{id} ───────────────────────────────────────────────────
     if method == "GET" and session_id:
         return get_session_messages(session_id)
 
-    # ── POST /sessions ───────────────────────────────────────────────────────
     if method == "POST" and path == "/sessions":
         try:
             body = json.loads(event.get("body") or "{}")
